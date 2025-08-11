@@ -1,0 +1,87 @@
+name: Update component config ref
+description: Update component config ref
+
+inputs:
+  tool:
+    required: true
+    type: string
+  component:
+    required: true
+    type: string
+  ref:
+    required: true
+    type: string
+  gh_app_key:
+    required: true
+    type: string
+
+runs:
+  using: "composite"
+  steps:
+    - id: bearer
+      name: Generate Github API Bearer Token
+      shell: bash
+      run: |
+        unix_now=$(date +%s)
+        key=$(echo -n "${{ inputs.gh_app_key }}" | base64 -d)
+
+        header='{"alg": "RS256", "typ": "JWT"}'
+        payload='{"iss": 1764207, "iat": '$((${unix_now}-60))', "exp": '$((${unix_now}+600))'}'
+
+        header_base64=$(echo -n "${header}" | openssl base64 | tr -d '=' | tr '/+' '_-' | tr -d '\n')
+        payload_base64=$(echo -n "${payload}" | openssl base64 | tr -d '=' | tr '/+' '_-' | tr -d '\n')
+
+        content="${header_base64}.${payload_base64}"
+        signature=$(openssl dgst -sha256 -sign <(echo -n "${key}") <(echo -n "${content}") | openssl base64 | tr -d '=' | tr '/+' '_-' | tr -d '\n')
+
+        echo "token=${content}.${signature}" >> $GITHUB_OUTPUT
+
+    - id: token
+      name: Generate Github API Access token
+      shell: bash
+      run: |
+        access_token=$(curl -s \
+                        --fail \
+                        -X POST \
+                        -H 'Authorization: Bearer ${{ steps.bearer.outputs.token }}' \
+                        https://api.github.com/app/installations/80385200/access_tokens)
+        echo "access_token=$(echo "${access_token}" | jq -r .token)" >> $GITHUB_OUTPUT
+
+    - name: Clone component-configs repo
+      uses: actions/checkout@v4
+      with:
+        repository: cluebotng/component-configs
+        ref: main
+        token: ${{ steps.token.outputs.access_token }}
+
+    - name: Execute update-ref
+      shell: bash
+      run: |
+        ./update-ref "${{ inputs.tool }}" "${{ inputs.component }}" "${{ inputs.ref }}"
+
+    - name: Commit changes in component-configs repo
+      shell: bash
+      run: |
+        # Committer details
+        git config user.email "ci-update-component-ref[bot]@users.noreply.github.com"
+        git config user.name "ci-update-component-ref[bot]"
+
+        # Commit
+        git commit -am "Update ${{ inputs.tool }}/${{ inputs.component }} to ${{ inputs.ref }}"
+
+        # Push, with a few retries
+        for _ in {1..5};
+        do
+          if [ $_ -gt 1 ];
+          then
+            echo "Attempting to rebase"
+            git fetch -a
+            git rebase origin/main
+          fi
+          git push origin main
+          if [ $? -eq 0 ]; then exit 0; fi
+          sleep 1
+        done
+
+        echo "Failed to push"
+        exit 1
