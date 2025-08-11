@@ -67,7 +67,10 @@ runs:
         git config user.name "ci-update-component-ref[bot]"
 
         # Commit
-        git commit -am "Update ${{ inputs.tool }}/${{ inputs.component }} to ${{ inputs.ref }}"
+        if [ "$(git status --porcelain | wc -l)" != "0" ];
+        then
+          git commit -am "Update ${{ inputs.tool }}/${{ inputs.component }} to ${{ inputs.ref }}"
+        fi
 
         # Push, with a few retries
         for _ in {1..5};
