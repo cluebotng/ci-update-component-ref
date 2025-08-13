@@ -77,11 +77,19 @@ runs:
         git config user.email "ci-update-component-ref[bot]@users.noreply.github.com"
         git config user.name "ci-update-component-ref[bot]"
 
-        # Commit
-        if [ "$(git status --porcelain | wc -l)" != "0" ];
-        then
-          git commit -am "Update ${{ inputs.tool }}/${{ inputs.component }} to ${{ inputs.ref }}"
-        fi
+        # Figure out something nice for the mssage
+        if [ ! -z "${{ inputs.repository }}" ]; then export update_target="${{ inputs.repository }}"; fi
+        if [ ! -z "${{ inputs.component }}" ]; then export update_target="${{ inputs.component }}"; fi
+
+        # Commit per tool (ease rollback)
+        for file in *.yaml;
+        do
+          tool_name=$(sed 's/\.yaml$//' <<< "${file}")
+          if [ "$(git status --porcelain ${file} | wc -l)" != "0" ];
+          then
+            git commit -am "Update ${update_target} to ${{ inputs.ref }} [${tool_name}]"
+          fi
+        done
 
         # Push, with a few retries
         for _ in {1..5};
