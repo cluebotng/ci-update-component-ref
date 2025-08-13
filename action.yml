@@ -87,7 +87,8 @@ runs:
           tool_name=$(sed 's/\.yaml$//' <<< "${file}")
           if [ "$(git status --porcelain ${file} | wc -l)" != "0" ];
           then
-            git commit -am "Update ${update_target} to ${{ inputs.ref }} [${tool_name}]"
+            git add "${file}"
+            git commit -m "Update ${update_target} to ${{ inputs.ref }} [${tool_name}]"
           fi
         done
 
