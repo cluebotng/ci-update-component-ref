@@ -6,7 +6,10 @@ inputs:
     required: true
     type: string
   component:
-    required: true
+    required: false
+    type: string
+  repository:
+    required: false
     type: string
   ref:
     required: true
@@ -57,7 +60,15 @@ runs:
     - name: Execute update-ref
       shell: bash
       run: |
-        ./update-ref "${{ inputs.tool }}" "${{ inputs.component }}" "${{ inputs.ref }}"
+        if [ ! -z "${{ inputs.component }}" ];
+        then
+          ./update-ref "${{ inputs.tool }}" "${{ inputs.component }}" "${{ inputs.ref }}"
+        fi
+
+        if [ ! -z "${{ inputs.repository }}" ];
+        then
+          ./update-repository-ref "${{ inputs.tool }}" "${{ inputs.repository }}" "${{ inputs.ref }}"
+        fi
 
     - name: Commit changes in component-configs repo
       shell: bash
