@@ -88,7 +88,7 @@ runs:
           if [ "$(git status --porcelain ${file} | wc -l)" != "0" ];
           then
             git add "${file}"
-            git commit -m "Update ${update_target} to ${{ inputs.ref }} [${tool_name}]"
+            git commit -m "[${tool_name}] Update ${update_target} to ${{ inputs.ref }}"
           fi
         done
 
