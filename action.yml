@@ -51,7 +51,7 @@ runs:
         echo "access_token=$(echo "${access_token}" | jq -r .token)" >> $GITHUB_OUTPUT
 
     - name: Clone component-configs repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         repository: cluebotng/component-configs
         ref: main
