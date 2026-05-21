@@ -93,17 +93,16 @@ runs:
         done
 
         # Push, with a few retries
-        for _ in {1..5};
+        for attempt in {1..5};
         do
-          if [ $_ -gt 1 ];
+          if [ "${attempt}" -gt 1 ];
           then
-            echo "Attempting to rebase"
+            echo "Attempting to rebase (${attempt})"
             git fetch -a
             git rebase origin/main
+            sleep $((attempt * 2))
           fi
-          git push origin main
-          if [ $? -eq 0 ]; then exit 0; fi
-          sleep 1
+          if git push origin main; then exit 0; fi
         done
 
         echo "Failed to push"
